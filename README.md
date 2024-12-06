@@ -575,6 +575,53 @@ The field to insert the topic name.
 *Type:* STRING
 
 
+## ExtractTopicName
+
+Extract data from a message and use it as the topic name. You can either use the entire key/value (which should be a string), or use a field from a map or struct. 
+Use the concrete transformation type designed for the record key (com.github.jcustenborder.kafka.connect.transform.common.ExtractTopicName$Key) or value (com.github.jcustenborder.kafka.connect.transform.common.ExtractTopicName$Value). You can also extract the entire value from a message header value (string) by using the concrete type (com.github.jcustenborder.kafka.connect.transform.common.ExtractTopicName$Header).
+
+*Key*
+```
+com.github.jcustenborder.kafka.connect.transform.common.ExtractTopicName$Key
+```
+*Value*
+```
+com.github.jcustenborder.kafka.connect.transform.common.ExtractTopicName$Value
+```
+*Header*
+```
+com.github.jcustenborder.kafka.connect.transform.common.ExtractTopicName$Header
+```
+
+
+### Configuration
+
+#### General
+
+
+##### `field`
+
+Field name to use as the topic name. If left blank, the entire key or value is used (and assumed to be a string).
+
+*Importance:* MEDIUM
+
+*Type:* STRING
+
+##### `field.format`
+
+Specify field path format. Currently two formats are supported: JSON_PATH and PLAIN. If set to JSON_PATH, the transformer will interpret the field with JSON path interpreter, which supports nested field extraction. If left blank or set to PLAIN, the transformer will evaluate the field config as a non-nested field name. When using ExtractTopic$Header, only the default PLAIN format can be used, which will extract the header value as a string.
+
+*Importance:* MEDIUM
+
+*Type:* STRING
+
+##### `skip.missing.or.null`
+
+How to handle missing fields and null fields, keys, and values. By default, this transformation will throw an exception if a field defined in the field configuration is missing or null, or if no field is specified but the message’s key or value is null. If this configuration is set to true, the transformation will instead silently ignore these conditions and allow the record to pass through unaltered.
+
+*Importance:* MEDIUM
+
+*Type:* BOOLEAN
 
 
 
