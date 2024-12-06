@@ -112,19 +112,7 @@
 		</dependency>        
     </dependencies>
     <build>
-        <plugins>
-            <plugin>
-                <groupId>com.github.sherter.google-java-format</groupId>
-                <artifactId>google-java-format-maven-plugin</artifactId>
-                <version>1.8</version>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>format</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>        
+        <plugins>     
             <plugin>
                 <groupId>io.confluent</groupId>
                 <artifactId>kafka-connect-maven-plugin</artifactId>
