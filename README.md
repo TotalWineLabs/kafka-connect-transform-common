@@ -593,7 +593,6 @@ com.github.jcustenborder.kafka.connect.transform.common.ExtractTopicName$Value
 com.github.jcustenborder.kafka.connect.transform.common.ExtractTopicName$Header
 ```
 
-
 ### Configuration
 
 #### General
@@ -623,6 +622,58 @@ How to handle missing fields and null fields, keys, and values. By default, this
 
 *Type:* BOOLEAN
 
+
+## Filter
+
+Include or drop records that match the `filter.condition` predicate.
+
+The `filter.condition` is a predicate specifying JSON Path that is applied to each record processed, and when this predicate successfully matches the record is either included (when `filter.type=include`) or excluded (when `filter.type=exclude`).
+
+The `missing.or.null.behavior` property defines how the transform behaves when a record does not have the field(s) used in the filter condition predicate. By default the behavior is to fail. This property can also be set to include or exclude the record that is missing the predicate’s field(s).
+
+Use the transformation type designed for the record key (com.github.jcustenborder.kafka.connect.transform.common.Filter$Key) or value (com.github.jcustenborder.kafka.connect.transform.common.Filter$Value).
+
+*Key*
+```
+com.github.jcustenborder.kafka.connect.transform.common.Filter$Key
+```
+*Value*
+```
+com.github.jcustenborder.kafka.connect.transform.common.Filter$Value
+```
+
+### Configuration
+
+#### General
+
+
+##### `filter.condition`
+
+Specifies the criteria used to match records to be included or excluded by this transformation. Use JSON Path predicate notation defined in: https://github.com/json-path/JsonPath.
+
+*Importance:* HIGH
+
+*Type:* STRING
+
+##### `filter.type`
+
+Specifies the action to perform with records that match the filter.condition predicate. Use include to pass through all records that match the predicate and drop all records that do not satisfy the predicate, or use exclude to drop all records that match the predicate.
+
+*Importance:* HIGH
+
+*Valid Values:* [include, exclude]
+
+*Type:* STRING
+
+##### `missing.or.null.behavior`
+
+Specifies the behavior when the record does not have the field(s) used in the filter.condition. Use fail to throw an exception and fail the connector task, include to pass the record through, or exclude to drop the record.
+
+*Importance:* MEDIUM
+
+*Valid Values:* [fail, include, exclude]
+
+*Type:* STRING
 
 
 # Development

@@ -6,10 +6,6 @@ import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableMap;
 
-import org.apache.kafka.connect.data.Schema;
-import org.apache.kafka.connect.data.SchemaBuilder;
-import org.apache.kafka.connect.data.Struct;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.Map;
