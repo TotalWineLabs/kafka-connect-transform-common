@@ -246,11 +246,9 @@ com.github.jcustenborder.kafka.connect.transform.common.HeaderToField$Key
 com.github.jcustenborder.kafka.connect.transform.common.HeaderToField$Value
 ```
 
-
 ### Configuration
 
 #### General
-
 
 ##### `header.mappings`
 
@@ -260,6 +258,80 @@ The mapping of the header to the field in the message.
 
 *Type:* LIST
 
+## [FromJSON](https://jcustenborder.github.io/kafka-connect-documentation/projects/kafka-connect-transform-common/transformations/FromJSON.html)
+
+*Key*
+```
+com.github.jcustenborder.kafka.connect.transform.common.FromJSON$Key
+```
+*Value*
+```
+com.github.jcustenborder.kafka.connect.transform.common.FromJSON$Value
+```
+
+This transformation extracts a JSON-encoded string from a specified field (using a JSON path or plain field name), parses it, and inserts the resulting structured object into the payload under the same or a new field (also specified as a JSON path).
+
+### Configuration
+
+#### General
+
+##### `field`
+
+The field or JSON path to extract the JSON string from. If using JSON path, must start with `$`.
+
+*Importance:* MEDIUM
+
+*Type:* STRING
+
+##### `replacement.field`
+
+The field or JSON path where the parsed object will be inserted. If using JSON path, must start with `$`. Supports nested paths for Map values.
+
+*Importance:* LOW
+
+*Type:* STRING
+
+##### `field.format`
+
+Specify field path format. Supported values: `JSON_PATH` or `PLAIN`. If set to `JSON_PATH`, the transformer will interpret the field as a JSON path. If left blank or set to `PLAIN`, the transformer will treat the field as a simple field name.
+
+*Importance:* MEDIUM
+
+*Type:* STRING
+
+##### `skip.missing.or.null`
+
+How to handle missing or null fields. If true, records with missing/null fields are passed through unchanged. If false, such records will cause an exception.
+
+*Importance:* LOW
+
+*Type:* BOOLEAN
+
+### Example
+
+Suppose you have a record value like:
+
+```json
+{
+  "after": {
+    "item_location_key": 34745645,
+    "item_location": "{\"headers\":{\"source\":\"LMA\"},\"key\":\"4565434\",\"value\":{\"location\":{\"itemlocation\":{\"ItemLocationKey\":4565434}}}}"
+  }
+}
+```
+
+With the following configuration:
+
+```json
+{
+  "field": "$.after.item_location",
+  "replacement.field": "$.after.item_location",
+  "field.format": "JSON_PATH",
+  "skip.missing.or.null": true
+}
+```
+
+After transformation, the `item_location` field will be a structured object (Map) instead of a JSON string.
 
 
 

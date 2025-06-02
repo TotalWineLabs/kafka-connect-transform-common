@@ -27,7 +27,7 @@
         <version>3.3.1-1</version>
     </parent>
     <artifactId>kafka-connect-transform-common</artifactId>
-    <version>0.1.0.61-TWM</version>
+    <version>0.1.1.0-TWM</version>
     <name>kafka-connect-transform-common</name>
     <url>https://github.com/jcustenborder/kafka-connect-transform-common</url>
     <inceptionYear>2017</inceptionYear>
