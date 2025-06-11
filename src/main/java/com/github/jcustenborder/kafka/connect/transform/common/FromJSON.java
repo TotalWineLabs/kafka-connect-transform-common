@@ -67,7 +67,22 @@ public abstract class FromJSON<R extends ConnectRecord<R>> implements Transforma
       throw new DataException("Target (key or value) is null and 'skip.missing.or.null' is false");
     }
 
-    Object extractedField = (this.config.field == null) ? target : extractFieldWithJsonPath(target);
+    // Convert Struct to Map (deep, including nested Structs and arrays)
+    Map<String, Object> targetMap;
+    if (target instanceof Struct) {
+      targetMap = (Map<String, Object>) convertStructsInObject((Struct) target);
+    } else if (target instanceof Map) {
+      @SuppressWarnings("unchecked")
+      Map<String, Object> map = (Map<String, Object>) target;
+      targetMap = deepCopyMap(map);
+    } else {
+      if (this.config.skipMissingOrNull) {
+        return record;
+      }
+      throw new DataException("Target is not a Struct or Map, cannot update field");
+    }
+
+    Object extractedField = (this.config.field == null) ? targetMap : extractFieldWithJsonPath(targetMap);
 
     if (extractedField == null) {
       if (this.config.skipMissingOrNull) {
@@ -94,76 +109,36 @@ public abstract class FromJSON<R extends ConnectRecord<R>> implements Transforma
       throw new DataException("Failed to parse extracted field as JSON", e);
     }
 
-    // Replace the original field with the parsed object
-    Object newTarget;
-    if (target instanceof Struct) {
-      Struct struct = (Struct) target;
-      Struct updatedStruct = new Struct(struct.schema());
-      // Copy all fields first
-      for (org.apache.kafka.connect.data.Field f : struct.schema().fields()) {
-        updatedStruct.put(f.name(), struct.get(f));
-      }
-      // Handle JSON path for replacementField (only top-level for Struct)
-      String path = this.config.replacementField;
-      if (path.startsWith("$")) {
+    // Replace the original field with the parsed object (supporting nested replacementField)
+    String path = this.config.replacementField;
+    if (path.startsWith("$")) {
+      path = path.substring(1);
+      if (path.startsWith(".")) {
         path = path.substring(1);
-        if (path.startsWith(".")) {
-          path = path.substring(1);
-        }
       }
-      String[] pathParts = path.split("\\.");
-      if (pathParts.length == 1) {
-        updatedStruct.put(pathParts[0], parsedObject);
-      } else {
-        throw new DataException("Nested JSON path for replacementField is not supported for Struct type");
-      }
-      newTarget = updatedStruct;
-    } else if (target instanceof Map) {
-      @SuppressWarnings("unchecked")
-      Map<String, Object> map = (Map<String, Object>) target;
-      // Deep copy to ensure all nested maps are mutable
-      Map<String, Object> updatedMap = deepCopyMap(map);
-
-      // Handle JSON path for replacementField
-      String path = this.config.replacementField;
-      if (path.startsWith("$")) {
-        path = path.substring(1);
-        if (path.startsWith(".")) {
-          path = path.substring(1);
-        }
-      }
-      String[] pathParts = path.split("\\.");
-      Map<String, Object> current = updatedMap;
-      for (int i = 0; i < pathParts.length - 1; i++) {
-        Object next = current.get(pathParts[i]);
-        if (!(next instanceof Map)) {
-          next = new java.util.HashMap<String, Object>();
-          current.put(pathParts[i], next);
-        } else if (!(next instanceof java.util.HashMap)) {
-          // Convert to mutable map if needed
-          next = new java.util.HashMap<>((Map<String, Object>) next);
-          current.put(pathParts[i], next);
-        }
-        current = (Map<String, Object>) next;
-      }
-      current.put(pathParts[pathParts.length - 1], parsedObject);
-
-      newTarget = updatedMap;
-    } else {
-      // If target is not Struct or Map, cannot update field
-      if (this.config.skipMissingOrNull) {
-        return record;
-      }
-      throw new DataException("Target is not a Struct or Map, cannot update field");
     }
+    String[] pathParts = path.split("\\.");
+    Map<String, Object> current = targetMap;
+    for (int i = 0; i < pathParts.length - 1; i++) {
+      Object next = current.get(pathParts[i]);
+      if (!(next instanceof Map)) {
+        next = new java.util.HashMap<String, Object>();
+        current.put(pathParts[i], next);
+      } else if (!(next instanceof java.util.HashMap)) {
+        next = new java.util.HashMap<>((Map<String, Object>) next);
+        current.put(pathParts[i], next);
+      }
+      current = (Map<String, Object>) next;
+    }
+    current.put(pathParts[pathParts.length - 1], parsedObject);
 
-    // Build new record with updated key or value
+    // Always return a schemaless Map
     if (this instanceof FromJSON.Key) {
       return record.newRecord(
         record.topic(),
         record.kafkaPartition(),
-        record.keySchema(),
-        newTarget,
+        null,
+        targetMap,
         record.valueSchema(),
         record.value(),
         record.timestamp()
@@ -172,13 +147,14 @@ public abstract class FromJSON<R extends ConnectRecord<R>> implements Transforma
       return record.newRecord(
         record.topic(),
         record.kafkaPartition(),
-        record.keySchema(),
+        null,
         record.key(),
-        record.valueSchema(),
-        newTarget,
+        null,
+        targetMap,
         record.timestamp()
       );
     }
+
   }
 
   @Override
@@ -189,13 +165,11 @@ public abstract class FromJSON<R extends ConnectRecord<R>> implements Transforma
   private Object extractFieldWithJsonPath(Object target) {
     if (FromJSONConfig.FIELD_FORMAT_JSON_PATH.equals(this.config.fieldFormat)) {
       try {
-        if (target instanceof Map) {
-          ObjectMapper mapper = new ObjectMapper();
-          String json = mapper.writeValueAsString(target);
-          return JsonPath.read(json, this.config.field); // Extract using JsonPath
-        } else {
-          return JsonPath.read(target, this.config.field); // Extract using JsonPath
-        }
+        // Always recursively convert any Structs inside the object to Maps before serializing
+        Object toSerialize = convertStructsInObject(target);
+        ObjectMapper mapper = new ObjectMapper();
+        String json = mapper.writeValueAsString(toSerialize);
+        return JsonPath.read(json, this.config.field); // Extract using JsonPath
       } catch (Exception e) {
         if (this.config.skipMissingOrNull) {
           return null;
@@ -244,5 +218,55 @@ public abstract class FromJSON<R extends ConnectRecord<R>> implements Transforma
       copy.put(entry.getKey(), value);
     }
     return copy;
+  }
+
+  /**
+   * Recursively converts a Struct to a Map<String, Object>.
+   */
+  private static Map<String, Object> structToMap(Struct struct) {
+    Map<String, Object> map = new java.util.HashMap<>();
+    for (org.apache.kafka.connect.data.Field field : struct.schema().fields()) {
+      Object value = struct.get(field);
+      if (value instanceof Struct) {
+        value = structToMap((Struct) value);
+      } else if (value instanceof java.util.List) {
+        java.util.List<?> list = (java.util.List<?>) value;
+        java.util.List<Object> newList = new java.util.ArrayList<>(list.size());
+        for (Object item : list) {
+          if (item instanceof Struct) {
+            newList.add(structToMap((Struct) item));
+          } else {
+            newList.add(item);
+          }
+        }
+        value = newList;
+      }
+      map.put(field.name(), value);
+    }
+    return map;
+  }
+
+  /**
+   * Recursively converts Structs to Maps within any object (Map, List, Struct, or primitive).
+   */
+  @SuppressWarnings("unchecked")
+  private static Object convertStructsInObject(Object obj) {
+    if (obj instanceof Struct) {
+      return structToMap((Struct) obj);
+    } else if (obj instanceof Map) {
+      Map<String, Object> result = new java.util.HashMap<>();
+      for (Map.Entry<?, ?> entry : ((Map<?, ?>) obj).entrySet()) {
+        result.put(String.valueOf(entry.getKey()), convertStructsInObject(entry.getValue()));
+      }
+      return result;
+    } else if (obj instanceof java.util.List) {
+      java.util.List<Object> result = new java.util.ArrayList<>();
+      for (Object item : (java.util.List<?>) obj) {
+        result.add(convertStructsInObject(item));
+      }
+      return result;
+    } else {
+      return obj;
+    }
   }
 }
