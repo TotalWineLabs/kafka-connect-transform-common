@@ -203,6 +203,93 @@ The field to place the extracted value into.
 
 
 
+## [ReplaceNestedField](https://jcustenborder.github.io/kafka-connect-documentation/projects/kafka-connect-transform-common/transformations/ReplaceNestedField.html)
+
+*Key*
+```
+com.github.jcustenborder.kafka.connect.transform.common.ReplaceNestedField$Key
+```
+*Value*
+```
+com.github.jcustenborder.kafka.connect.transform.common.ReplaceNestedField$Value
+```
+
+This transformation is used to replace nested fields in structured or schemaless data with null values. It supports dot notation for accessing deeply nested fields and is particularly useful for PII masking and data anonymization scenarios.
+
+### Configuration
+
+#### General
+
+
+##### `fields`
+
+A comma-separated list of field paths to replace with null. Supports dot notation for nested fields (e.g., `shipping.first_name,delivery.address.street`). Works with both schema-aware (Struct) and schemaless (Map) data.
+
+*Importance:* HIGH
+
+*Type:* LIST
+
+### Example
+
+To mask PII fields in a nested structure:
+
+```properties
+transforms=maskPII
+transforms.maskPII.type=com.github.jcustenborder.kafka.connect.transform.common.ReplaceNestedField$Value
+transforms.maskPII.fields=shipping.shipping_first_name,shipping.shipping_last_name,delivery.delivery_first_name,delivery.delivery_last_name
+```
+
+**Input:**
+```json
+{
+  "order_id": "12345",
+  "shipping": {
+    "shipping_first_name": "John",
+    "shipping_last_name": "Doe",
+    "shipping_line1": "123 Main St"
+  },
+  "delivery": {
+    "delivery_first_name": "Jane",
+    "delivery_last_name": "Smith"
+  }
+}
+```
+
+**Output:**
+```json
+{
+  "order_id": "12345",
+  "shipping": {
+    "shipping_first_name": null,
+    "shipping_last_name": null,
+    "shipping_line1": "123 Main St"
+  },
+  "delivery": {
+    "delivery_first_name": null,
+    "delivery_last_name": null
+  }
+}
+```
+
+### Testing
+
+To test the ReplaceNestedField transformation, you can run the provided test suite:
+
+```bash
+mvn test -Dtest=SimpleReplaceNestedFieldTest -Denforcer.skip=true -Dcheckstyle.skip=true
+```
+
+The test file `src/test/java/com/github/jcustenborder/kafka/connect/transform/common/SimpleReplaceNestedFieldTest.java` contains comprehensive test cases that demonstrate:
+
+- **Schema-aware transformation**: Tests replacing nested fields in structured data with defined schemas
+- **Schemaless transformation**: Tests replacing nested fields in Map-based data without schemas  
+- **Key transformation**: Tests replacing fields in record keys
+
+Each test method includes detailed logging that shows the input and output of the transformation, making it easy to understand exactly how the transformation works with different data types and structures.
+
+
+
+
 ## [ExtractTimestamp](https://jcustenborder.github.io/kafka-connect-documentation/projects/kafka-connect-transform-common/transformations/ExtractTimestamp.html)
 
 *Key*
