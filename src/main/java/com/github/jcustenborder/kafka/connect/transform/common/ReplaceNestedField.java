@@ -27,13 +27,12 @@ import org.apache.kafka.connect.data.Field;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.kafka.connect.data.Struct;
-import org.apache.kafka.connect.data.SchemaBuilder;
+
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
 public abstract class ReplaceNestedField<R extends ConnectRecord<R>> extends BaseTransformation<R> {
-  private static final String PURPOSE = "nested field replacement";
   
   private Set<String> fieldsToReplace;
   private Cache<Schema, Schema> schemaUpdateCache;
