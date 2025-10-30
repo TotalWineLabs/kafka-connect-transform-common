@@ -22,8 +22,6 @@ import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.connector.ConnectRecord;
 import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.transforms.Transformation;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.kafka.connect.data.Struct;
 import com.jayway.jsonpath.JsonPath;
 

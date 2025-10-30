@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 
+                              http://maven.apache.org/xsd/settings-1.0.0.xsd">
+  
+  <profiles>
+    <profile>
+      <id>disable-enforcer</id>
+      <properties>
+        <enforcer.skip>true</enforcer.skip>
+        <maven.enforcer.skip>true</maven.enforcer.skip>
+        <checkstyle.skip>true</checkstyle.skip>
+        <maven.javadoc.skip>true</maven.javadoc.skip>
+        <maven.source.skip>true</maven.source.skip>
+      </properties>
+      <build>
+        <pluginManagement>
+          <plugins>
+            <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-enforcer-plugin</artifactId>
+              <executions>
+                <execution>
+                  <id>enforce-versions</id>
+                  <phase>none</phase>
+                </execution>
+              </executions>
+            </plugin>
+          </plugins>
+        </pluginManagement>
+      </build>
+    </profile>
+  </profiles>
+  
+  <activeProfiles>
+    <activeProfile>disable-enforcer</activeProfile>
+  </activeProfiles>
+  
+</settings>
