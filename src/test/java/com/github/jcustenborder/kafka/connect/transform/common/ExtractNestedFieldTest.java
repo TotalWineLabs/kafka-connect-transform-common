@@ -16,12 +16,12 @@
 package com.github.jcustenborder.kafka.connect.transform.common;
 
 import com.google.common.collect.ImmutableMap;
-import org.apache.kafka.connect.connector.ConnectRecord;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaBuilder;
 import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.apache.kafka.connect.transforms.Transformation;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -32,9 +32,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-public abstract class ExtractNestedFieldTest extends TransformationTest {
-  protected ExtractNestedFieldTest(boolean isKey) {
-    super(isKey);
+public class ExtractNestedFieldTest {
+  private Transformation<SinkRecord> transformation;
+
+  @BeforeEach
+  public void before() {
+    this.transformation = new ExtractNestedField.Value();
   }
 
   @Test
@@ -375,18 +378,6 @@ public abstract class ExtractNestedFieldTest extends TransformationTest {
     assertNotNull(transformedRecord, "transformedRecord should not be null.");
     assertSchema(expectedSchema, transformedRecord.valueSchema());
     assertStruct(expectedStruct, (Struct) transformedRecord.value());
-  }
-
-
-  public static class ValueTest<R extends ConnectRecord<R>> extends ExtractNestedFieldTest {
-    protected ValueTest() {
-      super(false);
-    }
-
-    @Override
-    protected Transformation<SinkRecord> create() {
-      return new ExtractNestedField.Value();
-    }
   }
 
 }
