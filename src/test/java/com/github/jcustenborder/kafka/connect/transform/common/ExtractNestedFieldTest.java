@@ -24,9 +24,13 @@ import org.apache.kafka.connect.sink.SinkRecord;
 import org.apache.kafka.connect.transforms.Transformation;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
+
 import static com.github.jcustenborder.kafka.connect.utils.AssertSchema.assertSchema;
 import static com.github.jcustenborder.kafka.connect.utils.AssertStruct.assertStruct;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public abstract class ExtractNestedFieldTest extends TransformationTest {
   protected ExtractNestedFieldTest(boolean isKey) {
@@ -87,6 +91,290 @@ public abstract class ExtractNestedFieldTest extends TransformationTest {
       assertSchema(expectedSchema, transformedRecord.valueSchema());
       assertStruct(expectedStruct, (Struct) transformedRecord.value());
     }
+  }
+
+  @Test
+  public void testArrayExtractionFirstElement() {
+    this.transformation.configure(
+        ImmutableMap.of(
+            ExtractNestedFieldConfig.INNER_FIELD_NAME_CONF, "0",
+            ExtractNestedFieldConfig.OUTER_FIELD_NAME_CONF, "items",
+            ExtractNestedFieldConfig.OUTPUT_FIELD_NAME_CONF, "firstItem"
+        )
+    );
+
+    final Schema itemSchema = SchemaBuilder.struct()
+        .name("Item")
+        .field("name", Schema.STRING_SCHEMA)
+        .field("price", Schema.FLOAT64_SCHEMA)
+        .build();
+    
+    final Schema inputSchema = SchemaBuilder.struct()
+        .field("orderId", Schema.STRING_SCHEMA)
+        .field("items", SchemaBuilder.array(itemSchema).build())
+        .build();
+    
+    final Schema expectedSchema = SchemaBuilder.struct()
+        .field("orderId", Schema.STRING_SCHEMA)
+        .field("items", SchemaBuilder.array(itemSchema).build())
+        .field("firstItem", itemSchema)
+        .build();
+
+    final Struct item1 = new Struct(itemSchema)
+        .put("name", "product1")
+        .put("price", 19.99);
+    final Struct item2 = new Struct(itemSchema)
+        .put("name", "product2")
+        .put("price", 29.99);
+
+    final Struct inputStruct = new Struct(inputSchema)
+        .put("orderId", "order123")
+        .put("items", Arrays.asList(item1, item2));
+
+    final Struct expectedStruct = new Struct(expectedSchema)
+        .put("orderId", "order123")
+        .put("items", Arrays.asList(item1, item2))
+        .put("firstItem", item1);
+
+    final SinkRecord inputRecord = new SinkRecord(
+        "topic",
+        1,
+        null,
+        null,
+        inputSchema,
+        inputStruct,
+        1L
+    );
+
+    final SinkRecord transformedRecord = this.transformation.apply(inputRecord);
+    assertNotNull(transformedRecord, "transformedRecord should not be null.");
+    assertSchema(expectedSchema, transformedRecord.valueSchema());
+    assertStruct(expectedStruct, (Struct) transformedRecord.value());
+  }
+
+  @Test
+  public void testArrayExtractionSecondElement() {
+    this.transformation.configure(
+        ImmutableMap.of(
+            ExtractNestedFieldConfig.INNER_FIELD_NAME_CONF, "1",
+            ExtractNestedFieldConfig.OUTER_FIELD_NAME_CONF, "items",
+            ExtractNestedFieldConfig.OUTPUT_FIELD_NAME_CONF, "secondItem"
+        )
+    );
+
+    final Schema itemSchema = SchemaBuilder.struct()
+        .name("Item")
+        .field("name", Schema.STRING_SCHEMA)
+        .build();
+    
+    final Schema inputSchema = SchemaBuilder.struct()
+        .field("items", SchemaBuilder.array(itemSchema).build())
+        .build();
+
+    final Struct item1 = new Struct(itemSchema).put("name", "product1");
+    final Struct item2 = new Struct(itemSchema).put("name", "product2");
+    final Struct item3 = new Struct(itemSchema).put("name", "product3");
+
+    final Struct inputStruct = new Struct(inputSchema)
+        .put("items", Arrays.asList(item1, item2, item3));
+
+    final SinkRecord inputRecord = new SinkRecord(
+        "topic",
+        1,
+        null,
+        null,
+        inputSchema,
+        inputStruct,
+        1L
+    );
+
+    final SinkRecord transformedRecord = this.transformation.apply(inputRecord);
+    assertNotNull(transformedRecord, "transformedRecord should not be null.");
+    
+    final Struct result = (Struct) transformedRecord.value();
+    final Struct extractedItem = result.getStruct("secondItem");
+    assertEquals("product2", extractedItem.getString("name"));
+  }
+
+  @Test
+  public void testArrayExtractionOutOfBounds() {
+    this.transformation.configure(
+        ImmutableMap.of(
+            ExtractNestedFieldConfig.INNER_FIELD_NAME_CONF, "5",
+            ExtractNestedFieldConfig.OUTER_FIELD_NAME_CONF, "items",
+            ExtractNestedFieldConfig.OUTPUT_FIELD_NAME_CONF, "item"
+        )
+    );
+
+    final Schema itemSchema = SchemaBuilder.struct()
+        .name("Item")
+        .field("name", Schema.STRING_SCHEMA)
+        .build();
+    
+    final Schema inputSchema = SchemaBuilder.struct()
+        .field("items", SchemaBuilder.array(itemSchema).build())
+        .build();
+
+    final Struct item1 = new Struct(itemSchema).put("name", "product1");
+
+    final Struct inputStruct = new Struct(inputSchema)
+        .put("items", Arrays.asList(item1));
+
+    final SinkRecord inputRecord = new SinkRecord(
+        "topic",
+        1,
+        null,
+        null,
+        inputSchema,
+        inputStruct,
+        1L
+    );
+
+    assertThrows(IllegalArgumentException.class, () -> {
+      this.transformation.apply(inputRecord);
+    });
+  }
+
+  @Test
+  public void testArrayExtractionNegativeIndex() {
+    this.transformation.configure(
+        ImmutableMap.of(
+            ExtractNestedFieldConfig.INNER_FIELD_NAME_CONF, "-1",
+            ExtractNestedFieldConfig.OUTER_FIELD_NAME_CONF, "items",
+            ExtractNestedFieldConfig.OUTPUT_FIELD_NAME_CONF, "item"
+        )
+    );
+
+    final Schema itemSchema = SchemaBuilder.struct()
+        .name("Item")
+        .field("name", Schema.STRING_SCHEMA)
+        .build();
+    
+    final Schema inputSchema = SchemaBuilder.struct()
+        .field("items", SchemaBuilder.array(itemSchema).build())
+        .build();
+
+    final Struct item1 = new Struct(itemSchema).put("name", "product1");
+
+    final Struct inputStruct = new Struct(inputSchema)
+        .put("items", Arrays.asList(item1));
+
+    final SinkRecord inputRecord = new SinkRecord(
+        "topic",
+        1,
+        null,
+        null,
+        inputSchema,
+        inputStruct,
+        1L
+    );
+
+    assertThrows(IllegalArgumentException.class, () -> {
+      this.transformation.apply(inputRecord);
+    });
+  }
+
+  @Test
+  public void testArrayExtractionWithPrimitiveTypes() {
+    this.transformation.configure(
+        ImmutableMap.of(
+            ExtractNestedFieldConfig.INNER_FIELD_NAME_CONF, "0",
+            ExtractNestedFieldConfig.OUTER_FIELD_NAME_CONF, "tags",
+            ExtractNestedFieldConfig.OUTPUT_FIELD_NAME_CONF, "firstTag"
+        )
+    );
+
+    final Schema inputSchema = SchemaBuilder.struct()
+        .field("id", Schema.STRING_SCHEMA)
+        .field("tags", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
+        .build();
+    
+    final Schema expectedSchema = SchemaBuilder.struct()
+        .field("id", Schema.STRING_SCHEMA)
+        .field("tags", SchemaBuilder.array(Schema.STRING_SCHEMA).build())
+        .field("firstTag", Schema.STRING_SCHEMA)
+        .build();
+
+    final Struct inputStruct = new Struct(inputSchema)
+        .put("id", "item123")
+        .put("tags", Arrays.asList("electronics", "sale", "new"));
+
+    final Struct expectedStruct = new Struct(expectedSchema)
+        .put("id", "item123")
+        .put("tags", Arrays.asList("electronics", "sale", "new"))
+        .put("firstTag", "electronics");
+
+    final SinkRecord inputRecord = new SinkRecord(
+        "topic",
+        1,
+        null,
+        null,
+        inputSchema,
+        inputStruct,
+        1L
+    );
+
+    final SinkRecord transformedRecord = this.transformation.apply(inputRecord);
+    assertNotNull(transformedRecord, "transformedRecord should not be null.");
+    assertSchema(expectedSchema, transformedRecord.valueSchema());
+    assertStruct(expectedStruct, (Struct) transformedRecord.value());
+  }
+
+  @Test
+  public void testBackwardCompatibilityWithStructAccess() {
+    // This test ensures the original struct-based behavior still works
+    this.transformation.configure(
+        ImmutableMap.of(
+            ExtractNestedFieldConfig.INNER_FIELD_NAME_CONF, "zipCode",
+            ExtractNestedFieldConfig.OUTER_FIELD_NAME_CONF, "location",
+            ExtractNestedFieldConfig.OUTPUT_FIELD_NAME_CONF, "zip"
+        )
+    );
+
+    final Schema locationSchema = SchemaBuilder.struct()
+        .name("Location")
+        .field("city", Schema.STRING_SCHEMA)
+        .field("zipCode", Schema.STRING_SCHEMA)
+        .build();
+    
+    final Schema inputSchema = SchemaBuilder.struct()
+        .field("name", Schema.STRING_SCHEMA)
+        .field("location", locationSchema)
+        .build();
+    
+    final Schema expectedSchema = SchemaBuilder.struct()
+        .field("name", Schema.STRING_SCHEMA)
+        .field("location", locationSchema)
+        .field("zip", Schema.STRING_SCHEMA)
+        .build();
+
+    final Struct locationStruct = new Struct(locationSchema)
+        .put("city", "New York")
+        .put("zipCode", "10001");
+    
+    final Struct inputStruct = new Struct(inputSchema)
+        .put("name", "Office")
+        .put("location", locationStruct);
+    
+    final Struct expectedStruct = new Struct(expectedSchema)
+        .put("name", "Office")
+        .put("location", locationStruct)
+        .put("zip", "10001");
+
+    final SinkRecord inputRecord = new SinkRecord(
+        "topic",
+        1,
+        null,
+        null,
+        inputSchema,
+        inputStruct,
+        1L
+    );
+
+    final SinkRecord transformedRecord = this.transformation.apply(inputRecord);
+    assertNotNull(transformedRecord, "transformedRecord should not be null.");
+    assertSchema(expectedSchema, transformedRecord.valueSchema());
+    assertStruct(expectedStruct, (Struct) transformedRecord.value());
   }
 
 
