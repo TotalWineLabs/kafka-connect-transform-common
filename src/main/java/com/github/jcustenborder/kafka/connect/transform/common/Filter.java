@@ -33,6 +33,7 @@ import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.PathNotFoundException;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -99,7 +100,7 @@ public abstract class Filter<R extends ConnectRecord<R>> implements Transformati
   private R applyFilter(R record, Map<String, Object> data) {
     try {
       // Wrap into a List because JsonPath filter expression only works on lists
-      List<Map<String, Object>> dataList = List.of(data);
+      List<Map<String, Object>> dataList = Collections.singletonList(data);
       // Evaluate the JSONPath expression
       DocumentContext document = JsonPath.parse(dataList);
       boolean isMatch = ((List) document.read(config.filterCondition)).size() > 0;

@@ -27,12 +27,13 @@
         <version>3.3.1-1</version>
     </parent>
     <artifactId>kafka-connect-transform-common</artifactId>
-    <version>0.1.0.61-TWM</version>
+    <version>0.1.2.0-TWM</version>
     <name>kafka-connect-transform-common</name>
     <url>https://github.com/jcustenborder/kafka-connect-transform-common</url>
     <inceptionYear>2017</inceptionYear>
     <description>Common transformations for Kafka Connect.</description>
 	<properties>
+        <maven.compiler.release>21</maven.compiler.release>
 	    <slf4j.version>1.7.30</slf4j.version>
 	</properties>    
     <licenses>
@@ -112,10 +113,62 @@
 		</dependency>        
     </dependencies>
     <build>
-        <plugins>     
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-checkstyle-plugin</artifactId>
+                <version>3.6.0</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>com.puppycrawl.tools</groupId>
+                        <artifactId>checkstyle</artifactId>
+                        <version>10.21.1</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <version>3.5.0</version>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>3.10.1</version>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.4.2</version>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>3.7.1</version>
+                <configuration>
+                    <descriptors>
+                        <descriptor>src/assembly/package.xml</descriptor>
+                    </descriptors>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>make-assembly</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>io.confluent</groupId>
                 <artifactId>kafka-connect-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>hub</id>
+                        <phase>none</phase>
+                    </execution>
+                </executions>
                 <configuration>
                     <confluentControlCenterIntegration>true</confluentControlCenterIntegration>
                     <documentationUrl>https://jcustenborder.github.io/kafka-connect-documentation/

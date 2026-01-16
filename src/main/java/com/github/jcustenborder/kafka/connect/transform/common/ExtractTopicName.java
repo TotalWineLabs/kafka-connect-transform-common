@@ -22,8 +22,6 @@ import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.connector.ConnectRecord;
 import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.transforms.Transformation;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.kafka.connect.data.Struct;
 import com.jayway.jsonpath.JsonPath;
 
@@ -109,10 +107,10 @@ public abstract class ExtractTopicName<R extends ConnectRecord<R>> implements Tr
       }
     } else if (ExtractTopicNameConfig.FIELD_FORMAT_PLAIN.equals(this.config.fieldFormat)
         || this.config.fieldFormat == null) {
-      if (target instanceof Struct) {
-        return ((Struct) target).get(this.config.field);
-      } else if (target instanceof Map) {
-        return ((Map<?, ?>) target).get(this.config.field);
+      if (target instanceof Struct struct) {
+        return struct.get(this.config.field);
+      } else if (target instanceof Map<?, ?> map) {
+        return map.get(this.config.field);
       }
     }
 

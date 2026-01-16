@@ -47,7 +47,7 @@ public class GenericAssertions {
     public String get() {
       try (Writer w = new StringWriter()) {
         try (BufferedWriter writer = new BufferedWriter(w)) {
-          writer.append(String.format("Map for actual.%s() does not match expected.%s().", this.method, this.method));
+          writer.append("Map for actual.%s() does not match expected.%s().".formatted(this.method, this.method));
           writer.newLine();
           Map<?, ? extends MapDifference.ValueDifference<?>> differences = mapDifference.entriesDiffering();
           if (!differences.isEmpty()) {

@@ -96,9 +96,8 @@ public abstract class PatternMapString<R extends ConnectRecord<R>> extends BaseT
     } else {
       Struct outputStruct = inputStruct;
       Object toReplace = inputStruct.get(config.srcfieldname);
-      if (toReplace != null && toReplace instanceof String) {
+      if (toReplace != null && toReplace instanceof String replacedField) {
         String inputFieldName = config.srcfieldname;
-        String replacedField = (String) toReplace;
         log.trace("process() - Processing struct field '{}' value '{}'", inputFieldName, toReplace);
         final Matcher fieldMatcher = this.config.pattern.matcher(replacedField);
         String replacedValue = fieldMatcher.replaceAll(this.config.replacement);

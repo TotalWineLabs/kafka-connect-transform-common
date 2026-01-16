@@ -13,8 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-@Introduction("\n" +
-    "This project contains common transformations for every day use cases with Kafka Connect.")
+@Introduction("""
+    
+    This project contains common transformations for every day use cases with Kafka Connect.""")
     @Title("Common Transformations")
 @PluginName("kafka-connect-transform-common")
 @PluginOwner("jcustenborder")

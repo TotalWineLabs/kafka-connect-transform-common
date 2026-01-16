@@ -62,11 +62,9 @@ public class Debug<R extends ConnectRecord<R>> implements Transformation<R> {
     try {
       Map<String, Object> debugContent = new LinkedHashMap<>();
       addConnectRecord(debugContent, r);
-      if (r instanceof SinkRecord) {
-        SinkRecord sinkRecord = (SinkRecord) r;
+      if (r instanceof SinkRecord sinkRecord) {
         addSinkRecord(debugContent, sinkRecord);
-      } else if (r instanceof SourceRecord) {
-        SourceRecord sourceRecord = (SourceRecord) r;
+      } else if (r instanceof SourceRecord sourceRecord) {
         addSourceRecord(debugContent, sourceRecord);
       }
       addKey(debugContent, r);
