@@ -74,7 +74,7 @@ public abstract class ExtractNestedField<R extends ConnectRecord<R>> extends Bas
       
       if (arrayValue == null || index < 0 || index >= arrayValue.size()) {
         throw new IllegalArgumentException(
-            String.format("Cannot access index %d in array field '%s' (size: %d)", 
+            "Cannot access index %d in array field '%s' (size: %d)".formatted(
                 index, this.config.outerFieldName, arrayValue != null ? arrayValue.size() : 0)
         );
       }

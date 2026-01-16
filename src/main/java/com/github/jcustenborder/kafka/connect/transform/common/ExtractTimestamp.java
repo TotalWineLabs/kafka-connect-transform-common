@@ -57,18 +57,17 @@ public abstract class ExtractTimestamp<R extends ConnectRecord<R>> implements Tr
     final Object inputValue = input.get(this.config.fieldName);
     final long result;
 
-    if (inputValue instanceof Date) {
-      final Date inputDate = (Date) inputValue;
+    if (inputValue instanceof Date inputDate) {
       result = inputDate.getTime();
-    } else if (inputValue instanceof Long) {
-      result = (long) inputValue;
+    } else if (inputValue instanceof Long long1) {
+      result = long1;
     } else if (null == inputValue) {
       throw new DataException(
-          String.format("Field '%s' cannot be null.", this.config.fieldName)
+          "Field '%s' cannot be null.".formatted(this.config.fieldName)
       );
     } else {
       throw new DataException(
-          String.format("Cannot convert %s to timestamp.", inputValue.getClass().getName())
+          "Cannot convert %s to timestamp.".formatted(inputValue.getClass().getName())
       );
     }
 
@@ -81,7 +80,7 @@ public abstract class ExtractTimestamp<R extends ConnectRecord<R>> implements Tr
 
     if (null == inputField) {
       throw new DataException(
-          String.format("Schema does not have field '{}'", this.config.fieldName)
+          "Schema does not have field '{}'".formatted(this.config.fieldName)
       );
     }
 
@@ -92,7 +91,7 @@ public abstract class ExtractTimestamp<R extends ConnectRecord<R>> implements Tr
 
       if (null == fieldValue) {
         throw new DataException(
-            String.format("Field '%s' cannot be null.", this.config.fieldName)
+            "Field '%s' cannot be null.".formatted(this.config.fieldName)
         );
       }
 
@@ -105,7 +104,7 @@ public abstract class ExtractTimestamp<R extends ConnectRecord<R>> implements Tr
       }
     } else {
       throw new DataException(
-          String.format("Schema '{}' is not supported.", inputField.schema())
+          "Schema '{}' is not supported.".formatted(inputField.schema())
       );
     }
 

@@ -176,8 +176,7 @@ class HeaderToFieldConfig extends AbstractConfig {
     @Override
     public boolean equals(Object obj) {
       boolean result;
-      if ((obj instanceof HeaderToFieldMapping)) {
-        HeaderToFieldMapping that = (HeaderToFieldMapping) obj;
+      if ((obj instanceof HeaderToFieldMapping that)) {
         result = this.field.equals(that.field) &&
             this.schema.equals(that.schema) &&
             this.header.equals(that.header);

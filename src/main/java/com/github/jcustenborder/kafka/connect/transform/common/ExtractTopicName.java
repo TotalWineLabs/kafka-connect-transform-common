@@ -107,10 +107,10 @@ public abstract class ExtractTopicName<R extends ConnectRecord<R>> implements Tr
       }
     } else if (ExtractTopicNameConfig.FIELD_FORMAT_PLAIN.equals(this.config.fieldFormat)
         || this.config.fieldFormat == null) {
-      if (target instanceof Struct) {
-        return ((Struct) target).get(this.config.field);
-      } else if (target instanceof Map) {
-        return ((Map<?, ?>) target).get(this.config.field);
+      if (target instanceof Struct struct) {
+        return struct.get(this.config.field);
+      } else if (target instanceof Map<?, ?> map) {
+        return map.get(this.config.field);
       }
     }
 

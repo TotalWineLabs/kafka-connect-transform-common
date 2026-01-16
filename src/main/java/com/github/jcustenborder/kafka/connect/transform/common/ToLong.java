@@ -87,12 +87,11 @@ public abstract class ToLong<R extends ConnectRecord<R>> extends BaseTransformat
       if (this.config.fields.contains(field.name())) {
         if (null == o) {
           struct.put(field, null);
-        } else if (o instanceof Number) {
-          struct.put(field, ((Number) o).longValue());
+        } else if (o instanceof Number number) {
+          struct.put(field, number.longValue());
         } else {
           throw new DataException(
-              String.format(
-                  "Field '%s' is not a number. %s",
+              "Field '%s' is not a number. %s".formatted(
                   field.name(),
                   o.getClass().getSimpleName()
               )
