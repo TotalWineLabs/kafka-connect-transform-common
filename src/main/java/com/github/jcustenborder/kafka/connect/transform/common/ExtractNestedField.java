@@ -57,6 +57,56 @@ public abstract class ExtractNestedField<R extends ConnectRecord<R>> extends Bas
   }
 
   @Override
+  protected SchemaAndValue processMap(R record, Map<String, Object> input) {
+    // When the entire value is a MAP type, we need to extract from it
+    final Object outerValue = input.get(this.config.outerFieldName);
+    
+    if (outerValue == null) {
+      throw new IllegalArgumentException(
+          String.format("Outer field '%s' not found or is null", this.config.outerFieldName)
+      );
+    }
+
+    final Object innerFieldValue;
+
+    // Check if the outer value is a List (array access with numeric index)
+    if (outerValue instanceof List && isNumeric(this.config.innerFieldName)) {
+      final List<?> arrayValue = (List<?>) outerValue;
+      final int index = Integer.parseInt(this.config.innerFieldName);
+      
+      if (index < 0 || index >= arrayValue.size()) {
+        throw new IllegalArgumentException(
+            String.format("Cannot access index %d in array field '%s' (size: %d)", 
+                index, this.config.outerFieldName, arrayValue.size())
+        );
+      }
+      innerFieldValue = arrayValue.get(index);
+    } 
+    // Check if the outer value is a Map (nested map extraction)
+    else if (outerValue instanceof Map) {
+      final Map<?, ?> nestedMap = (Map<?, ?>) outerValue;
+      if (!nestedMap.containsKey(this.config.innerFieldName)) {
+        throw new IllegalArgumentException(
+            String.format("Cannot find key '%s' in nested map field '%s'", 
+                this.config.innerFieldName, this.config.outerFieldName)
+        );
+      }
+      innerFieldValue = nestedMap.get(this.config.innerFieldName);
+    } else {
+      throw new IllegalArgumentException(
+          String.format("Outer field '%s' is not a Map or List, cannot extract nested field", 
+              this.config.outerFieldName)
+      );
+    }
+
+    // Create output map with all original fields plus the extracted field
+    final Map<String, Object> outputMap = new HashMap<>(input);
+    outputMap.put(this.config.outputFieldName, innerFieldValue);
+    
+    return new SchemaAndValue(null, outputMap);
+  }
+
+  @Override
   protected SchemaAndValue processStruct(R record, Schema inputSchema, Struct input) {
     final Field outerField = inputSchema.field(this.config.outerFieldName);
     final Object outerValue = input.get(this.config.outerFieldName);
@@ -94,6 +144,34 @@ public abstract class ExtractNestedField<R extends ConnectRecord<R>> extends Bas
           builder.field(inputField.name(), inputField.schema());
         }
         builder.field(this.config.outputFieldName, elementSchema);
+        return builder.build();
+      });
+    } else if (outerField.schema().type() == Schema.Type.MAP) {
+      // Handle map access
+      final Map<?, ?> mapValue = (Map<?, ?>) outerValue;
+      
+      if (mapValue == null || !mapValue.containsKey(this.config.innerFieldName)) {
+        throw new IllegalArgumentException(
+            String.format("Cannot find key '%s' in map field '%s'", 
+                this.config.innerFieldName, this.config.outerFieldName)
+        );
+      }
+      
+      innerFieldValue = mapValue.get(this.config.innerFieldName);
+      final Schema valueSchema = outerField.schema().valueSchema();
+      
+      outputSchema = this.schemaCache.computeIfAbsent(inputSchema, s -> {
+        final SchemaBuilder builder = SchemaBuilder.struct();
+        if (!Strings.isNullOrEmpty(inputSchema.name())) {
+          builder.name(inputSchema.name());
+        }
+        if (inputSchema.isOptional()) {
+          builder.optional();
+        }
+        for (Field inputField : inputSchema.fields()) {
+          builder.field(inputField.name(), inputField.schema());
+        }
+        builder.field(this.config.outputFieldName, valueSchema);
         return builder.build();
       });
     } else {

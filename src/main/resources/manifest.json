@@ -1,0 +1,25 @@
+{
+  "name": "kafka-connect-transform-common",
+  "version": "0.1.2.4-TWM",
+  "title": "Kafka Connect Common Transformations",
+  "description": "Common transformations for Kafka Connect.",
+  "owner": {
+    "username": "jcustenborder",
+    "name": "Jeremy Custenborder"
+  },
+  "support": {
+    "summary": "Support provided through community involvement.",
+    "url": "https://github.com/jcustenborder/kafka-connect-transform-common/issues"
+  },
+  "tags": [
+    "Common",
+    "Transformation"
+  ],
+  "features": {
+    "confluent_control_center_integration": true
+  },
+  "logo": "",
+  "component_types": [
+    "transform"
+  ]
+}
