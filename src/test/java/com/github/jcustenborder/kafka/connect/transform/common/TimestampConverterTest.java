@@ -38,10 +38,12 @@ public class TimestampConverterTest {
         SinkRecord result = xform.apply(record);
         Struct resultEnvelope = (Struct) result.value();
         Struct resultAfter = (Struct) resultEnvelope.get("after");
-        // Type-changing conversion is not allowed for Structs, so value remains Long
-        assertEquals(1743984000000L, resultAfter.get("start_date"));
+        // Schema is rebuilt so type-changing conversion works for Structs
+        assertEquals("2025-04-07T00:00:00.000", resultAfter.get("start_date"));
+        // Verify schema was updated to STRING
+        assertEquals(Schema.Type.STRING, result.valueSchema().field("after").schema().field("start_date").schema().type());
         Struct resultBefore = (Struct) resultEnvelope.get("before");
-        // before.start_date should remain unchanged
+        // before.start_date should remain unchanged (only after.start_date is targeted)
         assertEquals(1743984000000L, resultBefore.get("start_date"));
     }
 
@@ -120,5 +122,46 @@ public class TimestampConverterTest {
 
         assertEquals("2025-04-07T00:00:00.000", resultValue.get("start_date"));
         assertEquals("r", resultValue.get("op"));
+    }
+
+    @Test
+    public void testTimestampConversionWithSampleData() {
+        Map<String, Object> after = new HashMap<>();
+        after.put("store_item_tracking_group_detail_key", 95543179);
+        after.put("item_key", 95886);
+        after.put("store_key", 1107);
+        after.put("store_item_tracking_group_key", 116359);
+        after.put("start_date", 1741651200000L);
+        after.put("end_date", null);
+        after.put("quantity", 0);
+        after.put("note", "");
+        after.put("create_date", 1741707582113L);
+        after.put("create_user_key", 7191);
+        after.put("last_modify_date", 1741707582113L);
+        after.put("last_modify_user_key", 7191);
+        after.put("supplier_order_increase_quantity", 0);
+        after.put("safety_stock_percent", "AA==");
+        after.put("projected_sales", 0);
+
+        Map<String, Object> value = new HashMap<>();
+        value.put("before", null);
+        value.put("after", after);
+        value.put("op", "r");
+
+        Map<String, Object> config = new HashMap<>();
+        config.put("field", "after.start_date");
+        config.put("target.type", "string");
+        config.put("format", "yyyy-MM-dd'T'HH:mm:ss.SSS");
+
+        TimestampConverter<SinkRecord> xform = new TimestampConverter<>();
+        xform.configure(config);
+
+        SinkRecord record = new SinkRecord("topic", 0, null, null, null, value, 0);
+        SinkRecord result = xform.apply(record);
+
+        Map resultValue = (Map) result.value();
+        Map resultAfter = (Map) resultValue.get("after");
+
+        assertEquals("2025-03-11T00:00:00.000", resultAfter.get("start_date"));
     }
 }
