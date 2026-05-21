@@ -3,6 +3,7 @@ package com.github.jcustenborder.kafka.connect.transform.common;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.connector.ConnectRecord;
 import org.apache.kafka.connect.data.Schema;
+import org.apache.kafka.connect.data.SchemaBuilder;
 import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.transforms.Transformation;
 import org.apache.kafka.connect.data.Field;
@@ -13,8 +14,10 @@ import java.text.SimpleDateFormat;
 import java.text.ParseException;
 
 /**
- * SMT that converts timestamp fields (including nested fields) to a target type, similar to TimestampConverter,
- * but supports dotted field paths for nested fields.
+ * SMT that converts timestamp fields (including nested fields) to a target type.
+ * Supports dotted field paths for nested fields (e.g., after.start_date).
+ * Handles both schemaful (Struct) and schemaless (Map) records, rebuilding
+ * schemas as needed for type-changing conversions.
  */
 public class TimestampConverter<R extends ConnectRecord<R>> implements Transformation<R> {
     public static final String OVERVIEW_DOC =
@@ -53,39 +56,62 @@ public class TimestampConverter<R extends ConnectRecord<R>> implements Transform
     public R apply(R record) {
         Object value = record.value();
         Schema schema = record.valueSchema();
-        Object updated = convertField(value, schema, fieldPathParts, 0);
-        if (updated == value) return record;
-        return record.newRecord(record.topic(), record.kafkaPartition(), record.keySchema(), record.key(), schema, updated, record.timestamp());
+        ConvertResult result = convertField(value, schema, fieldPathParts, 0);
+        if (result.value == value) return record;
+        return record.newRecord(record.topic(), record.kafkaPartition(), record.keySchema(), record.key(),
+                result.schema, result.value, record.timestamp());
     }
 
-    private Object convertField(Object value, Schema schema, List<String> path, int idx) {
-        if (value == null || path == null || idx >= path.size()) return value;
+    /**
+     * Holds both the converted value and updated schema (schema may change for type-changing conversions on Structs).
+     */
+    private static class ConvertResult {
+        final Object value;
+        final Schema schema;
+        ConvertResult(Object value, Schema schema) {
+            this.value = value;
+            this.schema = schema;
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private ConvertResult convertField(Object value, Schema schema, List<String> path, int idx) {
+        if (value == null || path == null || idx >= path.size()) return new ConvertResult(value, schema);
         String field = path.get(idx);
+
         if (schema != null && schema.type() == Schema.Type.STRUCT) {
             Struct struct = (Struct) value;
             Field f = schema.field(field);
-            if (f == null) return value;
+            if (f == null) return new ConvertResult(value, schema);
             Object orig = struct.get(field);
-            Object updated;
+
+            ConvertResult nested;
             if (idx == path.size() - 1) {
-                // Only allow type-preserving conversions for Structs
+                // Leaf field: perform conversion
                 Object converted = convertTimestamp(orig);
-                // Only update if type matches schema
-                if (converted != null && f.schema().type() == Schema.Type.INT64 && converted instanceof Long) {
-                    updated = converted;
-                } else {
-                    // Type-changing conversion not allowed for Structs, leave unchanged
-                    updated = orig;
-                }
+                Schema newFieldSchema = schemaForConvertedValue(converted, f.schema());
+                nested = new ConvertResult(converted, newFieldSchema);
             } else {
-                updated = convertField(orig, f.schema(), path, idx + 1);
+                // Intermediate field: recurse
+                nested = convertField(orig, f.schema(), path, idx + 1);
             }
-            if (Objects.equals(orig, updated)) return value;
-            Struct copy = new Struct(schema);
-            for (Field sf : schema.fields()) {
-                copy.put(sf, sf.name().equals(field) ? updated : struct.get(sf));
+
+            if (Objects.equals(orig, nested.value) && nested.schema == f.schema()) {
+                return new ConvertResult(value, schema);
             }
-            return copy;
+
+            // Rebuild schema with updated field type
+            Schema updatedSchema = rebuildSchema(schema, field, nested.schema);
+            Struct copy = new Struct(updatedSchema);
+            for (Field sf : updatedSchema.fields()) {
+                if (sf.name().equals(field)) {
+                    copy.put(sf, nested.value);
+                } else {
+                    copy.put(sf, struct.get(sf.name()));
+                }
+            }
+            return new ConvertResult(copy, updatedSchema);
+
         } else if (value instanceof Map) {
             Map<String, Object> map = (Map<String, Object>) value;
             Object orig = map.get(field);
@@ -93,19 +119,53 @@ public class TimestampConverter<R extends ConnectRecord<R>> implements Transform
             if (idx == path.size() - 1) {
                 updated = convertTimestamp(orig);
             } else {
-                updated = convertField(orig, null, path, idx + 1);
+                ConvertResult nested = convertField(orig, null, path, idx + 1);
+                updated = nested.value;
             }
-            if (Objects.equals(orig, updated)) return value;
+            if (Objects.equals(orig, updated)) return new ConvertResult(value, schema);
             Map<String, Object> copy = new HashMap<>(map);
             copy.put(field, updated);
-            return copy;
+            return new ConvertResult(copy, null);
         }
-        return value;
+        return new ConvertResult(value, schema);
+    }
+
+    /**
+     * Determine the appropriate schema for the converted value.
+     */
+    private Schema schemaForConvertedValue(Object converted, Schema originalSchema) {
+        if (converted == null) {
+            // Preserve optionality
+            return originalSchema.isOptional() ? Schema.OPTIONAL_STRING_SCHEMA : originalSchema;
+        }
+        if (converted instanceof String) {
+            return originalSchema.isOptional() ? Schema.OPTIONAL_STRING_SCHEMA : Schema.STRING_SCHEMA;
+        }
+        if (converted instanceof Long) {
+            return originalSchema.isOptional() ? Schema.OPTIONAL_INT64_SCHEMA : Schema.INT64_SCHEMA;
+        }
+        return originalSchema;
+    }
+
+    /**
+     * Rebuild a Struct schema replacing one field's schema with a new one.
+     */
+    private Schema rebuildSchema(Schema structSchema, String fieldName, Schema newFieldSchema) {
+        SchemaBuilder builder = SchemaBuilder.struct();
+        if (structSchema.name() != null) builder.name(structSchema.name());
+        if (structSchema.isOptional()) builder.optional();
+        for (Field f : structSchema.fields()) {
+            if (f.name().equals(fieldName)) {
+                builder.field(f.name(), newFieldSchema);
+            } else {
+                builder.field(f.name(), f.schema());
+            }
+        }
+        return builder.build();
     }
 
     private Object convertTimestamp(Object orig) {
         if (orig == null) return null;
-        // Only support Long (epoch millis) and String for now
         if (orig instanceof Long) {
             long ts = (Long) orig;
             switch (targetType.toLowerCase(Locale.ROOT)) {
@@ -128,7 +188,7 @@ public class TimestampConverter<R extends ConnectRecord<R>> implements Transform
                 case "date":
                 case "time":
                 case "timestamp":
-                    return ts; // Let Connect handle type conversion if needed
+                    return ts;
                 default:
                     throw new DataException("Unsupported target.type: " + targetType);
             }
@@ -155,8 +215,6 @@ public class TimestampConverter<R extends ConnectRecord<R>> implements Transform
 
     @Override
     public void close() {}
-
-    public void reset() {}
 
     @Override
     public String toString() {
