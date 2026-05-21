@@ -27,8 +27,6 @@ to run the plugin.
 3. Restart the Connect worker.
 
 
-
-
 # Transformations
 ## [BytesToString](https://jcustenborder.github.io/kafka-connect-documentation/projects/kafka-connect-transform-common/transformations/BytesToString.html)
 
@@ -259,6 +257,71 @@ The mapping of the header to the field in the message.
 *Importance:* HIGH
 
 *Type:* LIST
+
+
+
+## [TimestampConverter](https://jcustenborder.github.io/kafka-connect-documentation/projects/kafka-connect-transform-common/transformations/TimestampConverter.html)
+
+```
+com.github.jcustenborder.kafka.connect.transform.common.TimestampConverter
+```
+
+This transformation converts timestamp fields using top-level or dotted nested field paths (for example, `start_date` or `after.start_date`).
+
+### Note
+
+For schemaful records (`Struct`), conversions that would change the field type are skipped to preserve schema compatibility. For schemaless records (`Map`), type-changing conversion is supported. String formatting/parsing is done in UTC.
+
+### Configuration
+
+#### General
+
+
+##### `field`
+
+The field path to convert. Supports top-level and dotted nested paths.
+
+*Importance:* HIGH
+
+*Type:* STRING
+
+
+
+##### `target.type`
+
+The target type for conversion.
+
+*Importance:* HIGH
+
+*Type:* STRING
+
+*Validator:* Matches: ``string``, ``unix``, ``Date``, ``Time``, ``Timestamp``
+
+
+
+##### `format`
+
+The date format pattern used when converting to or from string values.
+
+*Importance:* MEDIUM
+
+*Type:* STRING
+
+*Default Value:* 
+
+
+
+##### `unix.precision`
+
+The unix precision to use for unix target type conversions.
+
+*Importance:* LOW
+
+*Type:* STRING
+
+*Default Value:* milliseconds
+
+*Validator:* Matches: ``milliseconds``, ``seconds``, ``microseconds``, ``nanoseconds``
 
 
 
