@@ -229,8 +229,8 @@ abstract class ConversionHandler {
 
     @Override
     public boolean equals(Object obj) {
-      if (obj instanceof SchemaKey) {
-        return 0 == compareTo((SchemaKey) obj);
+      if (obj instanceof SchemaKey key) {
+        return 0 == compareTo(key);
       } else {
         return false;
       }
@@ -277,7 +277,7 @@ abstract class ConversionHandler {
     ConversionHandlerFactory factory = CONVERSION_HANDLER_FACTORIES.get(key);
     if (null == factory) {
       throw new UnsupportedOperationException(
-          String.format("%s is not supported", key)
+          "%s is not supported".formatted(key)
       );
     }
     return factory.create(headerSchema, header, field);

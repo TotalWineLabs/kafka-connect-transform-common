@@ -1,0 +1,19 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: kafka-connect-transform-common
+  description: Kafka Connect plugin supporting various simple message transforms.
+  annotations:
+    sonarqube.org/project-key: kafka-connect-transform-common
+    opsgenie.com/component-selector: 'tag:"app:kafka-connect-transform-common"'
+    jenkins.io/job-full-name: digital:TotalWineLabs/kafka-connect-transform-common
+    backstage.io/techdocs-ref: dir:.
+    opsgenie.com/team: 'DevOps Team'
+    github.com/project-slug: TotalWineLabs/kafka-connect-transform-common
+  links:
+
+spec:
+  type: 
+  lifecycle: production
+  owner: group:default/ug-agile-architecture
+  

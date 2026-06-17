@@ -15,8 +15,8 @@ public class ExtractTopicTest {
   @Test
   public void test() {
 
-    Map<String, Object> value = Map.of(
-        "object", Map.of("id", "336f5547-9224-4b7b-a9e0-5cc87b48367a", "type", "SALE"));
+    Map<String, Object> value = ImmutableMap.of(
+        "object", ImmutableMap.of("id", "336f5547-9224-4b7b-a9e0-5cc87b48367a", "type", "SALE"));
 
     final SinkRecord input = new SinkRecord(
         "source-topic",

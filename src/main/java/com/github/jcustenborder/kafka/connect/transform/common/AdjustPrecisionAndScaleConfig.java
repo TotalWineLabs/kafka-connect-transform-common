@@ -52,10 +52,11 @@ public class AdjustPrecisionAndScaleConfig extends AbstractConfig {
 
   // Precision Mode
   public static final String PRECISION_MODE_CONFIG = "precision.mode";
-  static final String PRECISION_MODE_DOC = "Mode to use for precision modification:\n" +
-          "'none' (default): Perform no modification\n" +
-          "'undefined': Use provided precision when precision is undefined\n" +
-          "'max': Use provided precision as max precision";
+  static final String PRECISION_MODE_DOC = """
+          Mode to use for precision modification:
+          'none' (default): Perform no modification
+          'undefined': Use provided precision when precision is undefined
+          'max': Use provided precision as max precision""";
   static final String PRECISION_MODE_DEFAULT = "none";
   public static final String PRECISION_MODE_NONE = "none";
   public static final String PRECISION_MODE_UNDEFINED = "undefined";
@@ -74,10 +75,12 @@ public class AdjustPrecisionAndScaleConfig extends AbstractConfig {
 
   // Scale Mode
   public static final String SCALE_MODE_CONFIG = "scale.mode";
-  static final String SCALE_MODE_DOC = "Mode to use for scale modification:\n" +
-          "'none' (default): Perform no modification\n" +
-          "'undefined': Use provided scale when scale (and precision) are undefined\n" +
-          "'max': Use provided scale as max scale, or when scale (and precision) are undefined\n";
+  static final String SCALE_MODE_DOC = """
+          Mode to use for scale modification:
+          'none' (default): Perform no modification
+          'undefined': Use provided scale when scale (and precision) are undefined
+          'max': Use provided scale as max scale, or when scale (and precision) are undefined
+          """;
   static final String SCALE_MODE_DEFAULT = "none";
   public static final String SCALE_MODE_NONE = "none";
   public static final String SCALE_MODE_UNDEFINED = "undefined";
@@ -85,19 +88,21 @@ public class AdjustPrecisionAndScaleConfig extends AbstractConfig {
 
   // Scale Zero Mode
   public static final String SCALE_ZERO_MODE_CONFIG = "scale.zero.mode";
-  public static final String SCALE_ZERO_MODE_DOC = "Mode for handling zero scale:\n" +
-      "'none' (default): Perform no modification\n" +
-      "'value': When scale is zero, set scale to provided value";
+  public static final String SCALE_ZERO_MODE_DOC = """
+      Mode for handling zero scale:
+      'none' (default): Perform no modification
+      'value': When scale is zero, set scale to provided value""";
   static final String SCALE_ZERO_MODE_DEFAULT = "none";
   public static final String SCALE_ZERO_MODE_NONE = "none";
   public static final String SCALE_ZERO_MODE_VALUE = "value";
 
   // Scale Negative Mode
   public static final String SCALE_NEGATIVE_MODE_CONFIG = "scale.negative.mode";
-  public static final String SCALE_NEGATIVE_MODE_DOC = "Mode for handling negative scale:\n" +
-          "'none' (default): Perform no modification\n" +
-          "'zero': Set negative scale to zero\n" +
-          "'value':  When scale is negative, set scale to provided value";
+  public static final String SCALE_NEGATIVE_MODE_DOC = """
+          Mode for handling negative scale:
+          'none' (default): Perform no modification
+          'zero': Set negative scale to zero
+          'value':  When scale is negative, set scale to provided value""";
   static final String SCALE_NEGATIVE_MODE_DEFAULT = "none";
   public static final String SCALE_NEGATIVE_MODE_NONE = "none";
   public static final String SCALE_NEGATIVE_MODE_ZERO = "zero";

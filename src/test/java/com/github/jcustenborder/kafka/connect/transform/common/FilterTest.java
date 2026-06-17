@@ -81,8 +81,8 @@ public class FilterTest {
   @Test
   public void filter_include() {
 
-    Map<String, Object> value = Map.of(
-        "object", Map.of(
+    Map<String, Object> value = ImmutableMap.of(
+        "object", ImmutableMap.of(
           "id", "336f5547-9224-4b7b-a9e0-5cc87b48367a", 
           "type", "SALE"
         )
@@ -93,8 +93,8 @@ public class FilterTest {
   @Test
   public void filter_exclude() {
 
-    Map<String, Object> value = Map.of(
-        "object", Map.of(
+    Map<String, Object> value = ImmutableMap.of(
+        "object", ImmutableMap.of(
           "id", "336f5547-9224-4b7b-a9e0-5cc87b48367a", 
           "type", "SALE"
         )
@@ -105,8 +105,8 @@ public class FilterTest {
   @Test
   public void filter_missing() {
 
-    Map<String, Object> value = Map.of(
-        "object", Map.of(
+    Map<String, Object> value = ImmutableMap.of(
+        "object", ImmutableMap.of(
           "id", "336f5547-9224-4b7b-a9e0-5cc87b48367a"
         )
     );

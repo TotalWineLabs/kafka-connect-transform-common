@@ -109,16 +109,14 @@ public abstract class ExtractXPath<R extends ConnectRecord<R>> extends BaseTrans
     InputStream in = null;
     try {
       
-      if (inData instanceof String) {
+      if (inData instanceof String inFieldData) {
         log.trace("Handling XML String");
-        String inFieldData = (String) inData;
         in = new ByteArrayInputStream(inFieldData.getBytes());
         Document doc = builder.parse(in);
         Node node = (Node) xpathE.evaluate(doc, XPathConstants.NODE);
         String output = writer.writeToString(node);
         return output;  
-      } else if (inData instanceof byte[]) {
-        byte[] inFieldData = (byte[]) inData;
+      } else if (inData instanceof byte[] inFieldData) {
         log.trace("Handling byte array, length {}", inFieldData.length);
         in = new ByteArrayInputStream(inFieldData);
         Document doc = builder.parse(in);
@@ -190,9 +188,8 @@ public abstract class ExtractXPath<R extends ConnectRecord<R>> extends BaseTrans
     } else {
       Struct outputStruct = inputStruct;
       Object toReplace = inputStruct.get(config.inputField);
-      if (toReplace != null && toReplace instanceof String) {
+      if (toReplace != null && toReplace instanceof String replacedField) {
         String inputFieldName = config.inputField;
-        String replacedField = (String) toReplace;
         log.trace("process() - Processing struct field '{}' value '{}'", inputFieldName, toReplace);
         Object extractedValue = extractXPathString(replacedField);
         if (config.outputField.equals(config.inputField)) {

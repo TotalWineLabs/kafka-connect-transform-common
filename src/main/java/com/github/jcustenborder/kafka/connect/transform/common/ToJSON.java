@@ -83,8 +83,7 @@ public abstract class ToJSON<R extends ConnectRecord<R>> extends BaseTransformat
         break;
       default:
         throw new UnsupportedOperationException(
-            String.format(
-                "Schema type (%s)'%s' is not supported.",
+            "Schema type (%s)'%s' is not supported.".formatted(
                 ToJSONConfig.OUTPUT_SCHEMA_CONFIG,
                 this.config.outputSchema
             )

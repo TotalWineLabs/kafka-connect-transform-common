@@ -71,8 +71,7 @@ public abstract class NormalizeSchema<R extends ConnectRecord<R>> implements Tra
 
     @Override
     public boolean equals(Object o) {
-      if (o instanceof SchemaKey) {
-        SchemaKey that = (SchemaKey) o;
+      if (o instanceof SchemaKey that) {
         return 0 == this.compareTo(that);
       } else {
         return false;
@@ -112,7 +111,7 @@ public abstract class NormalizeSchema<R extends ConnectRecord<R>> implements Tra
       this.schemaVersions.put(schema.version(), schema);
       Optional<Integer> newLatestVersion = this.schemaVersions.keySet().stream()
           .max(Integer::compareTo);
-      if (!newLatestVersion.isPresent()) {
+      if (newLatestVersion.isEmpty()) {
         throw new DataException("Could not determine latest schema.");
       }
       log.trace(

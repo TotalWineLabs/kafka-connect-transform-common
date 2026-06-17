@@ -30,6 +30,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public abstract class ExtractNestedField<R extends ConnectRecord<R>> extends BaseTransformation<R> {
@@ -56,34 +57,166 @@ public abstract class ExtractNestedField<R extends ConnectRecord<R>> extends Bas
   }
 
   @Override
-  protected SchemaAndValue processStruct(R record, Schema inputSchema, Struct input) {
-    final Struct innerStruct = input.getStruct(this.config.outerFieldName);
-    final Schema outputSchema = this.schemaCache.computeIfAbsent(inputSchema, s -> {
+  protected SchemaAndValue processMap(R record, Map<String, Object> input) {
+    // When the entire value is a MAP type, we need to extract from it
+    final Object outerValue = input.get(this.config.outerFieldName);
+    
+    if (outerValue == null) {
+      throw new IllegalArgumentException(
+          String.format("Outer field '%s' not found or is null", this.config.outerFieldName)
+      );
+    }
 
-      final Field innerField = innerStruct.schema().field(this.config.innerFieldName);
-      final SchemaBuilder builder = SchemaBuilder.struct();
-      if (!Strings.isNullOrEmpty(inputSchema.name())) {
-        builder.name(inputSchema.name());
+    final Object innerFieldValue;
+
+    // Check if the outer value is a List (array access with numeric index)
+    if (outerValue instanceof List && isNumeric(this.config.innerFieldName)) {
+      final List<?> arrayValue = (List<?>) outerValue;
+      final int index = Integer.parseInt(this.config.innerFieldName);
+      
+      if (index < 0 || index >= arrayValue.size()) {
+        throw new IllegalArgumentException(
+            String.format("Cannot access index %d in array field '%s' (size: %d)", 
+                index, this.config.outerFieldName, arrayValue.size())
+        );
       }
-      if (inputSchema.isOptional()) {
-        builder.optional();
+      innerFieldValue = arrayValue.get(index);
+    } 
+    // Check if the outer value is a Map (nested map extraction)
+    else if (outerValue instanceof Map) {
+      final Map<?, ?> nestedMap = (Map<?, ?>) outerValue;
+      if (!nestedMap.containsKey(this.config.innerFieldName)) {
+        throw new IllegalArgumentException(
+            String.format("Cannot find key '%s' in nested map field '%s'", 
+                this.config.innerFieldName, this.config.outerFieldName)
+        );
       }
-      for (Field inputField : inputSchema.fields()) {
-        builder.field(inputField.name(), inputField.schema());
+      innerFieldValue = nestedMap.get(this.config.innerFieldName);
+    } else {
+      throw new IllegalArgumentException(
+          String.format("Outer field '%s' is not a Map or List, cannot extract nested field", 
+              this.config.outerFieldName)
+      );
+    }
+
+    // Create output map with all original fields plus the extracted field
+    final Map<String, Object> outputMap = new HashMap<>(input);
+    outputMap.put(this.config.outputFieldName, innerFieldValue);
+    
+    return new SchemaAndValue(null, outputMap);
+  }
+
+  @Override
+  protected SchemaAndValue processStruct(R record, Schema inputSchema, Struct input) {
+    final Field outerField = inputSchema.field(this.config.outerFieldName);
+    final Object outerValue = input.get(this.config.outerFieldName);
+    
+    // Check if the outer field is an array and inner field is a numeric index
+    final boolean isArrayAccess = outerField.schema().type() == Schema.Type.ARRAY && isNumeric(this.config.innerFieldName);
+    
+    final Schema outputSchema;
+    final Object innerFieldValue;
+    
+    if (isArrayAccess) {
+      // Handle array access
+      final int index = Integer.parseInt(this.config.innerFieldName);
+      final List<?> arrayValue = (List<?>) outerValue;
+      
+      if (arrayValue == null || index < 0 || index >= arrayValue.size()) {
+        throw new IllegalArgumentException(
+            "Cannot access index %d in array field '%s' (size: %d)".formatted(
+                index, this.config.outerFieldName, arrayValue != null ? arrayValue.size() : 0)
+        );
       }
-      builder.field(this.config.outputFieldName, innerField.schema());
-      return builder.build();
-    });
+      
+      innerFieldValue = arrayValue.get(index);
+      final Schema elementSchema = outerField.schema().valueSchema();
+      
+      outputSchema = this.schemaCache.computeIfAbsent(inputSchema, s -> {
+        final SchemaBuilder builder = SchemaBuilder.struct();
+        if (!Strings.isNullOrEmpty(inputSchema.name())) {
+          builder.name(inputSchema.name());
+        }
+        if (inputSchema.isOptional()) {
+          builder.optional();
+        }
+        for (Field inputField : inputSchema.fields()) {
+          builder.field(inputField.name(), inputField.schema());
+        }
+        builder.field(this.config.outputFieldName, elementSchema);
+        return builder.build();
+      });
+    } else if (outerField.schema().type() == Schema.Type.MAP) {
+      // Handle map access
+      final Map<?, ?> mapValue = (Map<?, ?>) outerValue;
+      
+      if (mapValue == null || !mapValue.containsKey(this.config.innerFieldName)) {
+        throw new IllegalArgumentException(
+            String.format("Cannot find key '%s' in map field '%s'", 
+                this.config.innerFieldName, this.config.outerFieldName)
+        );
+      }
+      
+      innerFieldValue = mapValue.get(this.config.innerFieldName);
+      final Schema valueSchema = outerField.schema().valueSchema();
+      
+      outputSchema = this.schemaCache.computeIfAbsent(inputSchema, s -> {
+        final SchemaBuilder builder = SchemaBuilder.struct();
+        if (!Strings.isNullOrEmpty(inputSchema.name())) {
+          builder.name(inputSchema.name());
+        }
+        if (inputSchema.isOptional()) {
+          builder.optional();
+        }
+        for (Field inputField : inputSchema.fields()) {
+          builder.field(inputField.name(), inputField.schema());
+        }
+        builder.field(this.config.outputFieldName, valueSchema);
+        return builder.build();
+      });
+    } else {
+      // Handle struct access
+      final Struct innerStruct = input.getStruct(this.config.outerFieldName);
+      
+      outputSchema = this.schemaCache.computeIfAbsent(inputSchema, s -> {
+        final Field innerField = innerStruct.schema().field(this.config.innerFieldName);
+        final SchemaBuilder builder = SchemaBuilder.struct();
+        if (!Strings.isNullOrEmpty(inputSchema.name())) {
+          builder.name(inputSchema.name());
+        }
+        if (inputSchema.isOptional()) {
+          builder.optional();
+        }
+        for (Field inputField : inputSchema.fields()) {
+          builder.field(inputField.name(), inputField.schema());
+        }
+        builder.field(this.config.outputFieldName, innerField.schema());
+        return builder.build();
+      });
+      
+      innerFieldValue = innerStruct.get(this.config.innerFieldName);
+    }
+    
     final Struct outputStruct = new Struct(outputSchema);
     for (Field inputField : inputSchema.fields()) {
       final Object value = input.get(inputField);
       outputStruct.put(inputField.name(), value);
     }
-    final Object innerFieldValue = innerStruct.get(this.config.innerFieldName);
     outputStruct.put(this.config.outputFieldName, innerFieldValue);
 
     return new SchemaAndValue(outputSchema, outputStruct);
-
+  }
+  
+  private boolean isNumeric(String str) {
+    if (str == null || str.isEmpty()) {
+      return false;
+    }
+    try {
+      Integer.parseInt(str);
+      return true;
+    } catch (NumberFormatException e) {
+      return false;
+    }
   }
 
 

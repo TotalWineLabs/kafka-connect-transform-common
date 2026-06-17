@@ -73,8 +73,8 @@ public abstract class ChangeCaseTest extends TransformationTest {
 
   private Struct makeStruct(Schema schema, CaseFormat caseFormat) {
     final Function<String, String> convert = s -> CaseFormat.LOWER_UNDERSCORE.to(caseFormat, s);
-    final Schema contacts = schema.fields().get(0).schema().valueSchema();
-    final Schema contact = contacts.fields().get(0).schema();
+    final Schema contacts = schema.fields().getFirst().schema().valueSchema();
+    final Schema contact = contacts.fields().getFirst().schema();
     return new Struct(schema).put(convert.apply("contacts"),
             new ArrayList<>(
                     Collections.singletonList(

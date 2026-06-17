@@ -159,8 +159,7 @@ public abstract class BaseTransformation<R extends ConnectRecord<R>> implements 
       result = processMap(record, inputSchema, (Map<Object, Object>) input);
     } else {
       throw new UnsupportedOperationException(
-          String.format(
-              "Schema is not supported. type='%s' name='%s'",
+          "Schema is not supported. type='%s' name='%s'".formatted(
               inputSchema.type(),
               inputSchema.name()
           )

@@ -73,8 +73,7 @@ public abstract class PatternFilter<R extends ConnectRecord<R>> implements Trans
       if (this.config.fields.contains(field)) {
         Object value = map.get(field);
 
-        if (value instanceof String) {
-          String input = (String) value;
+        if (value instanceof String input) {
           Matcher matcher = this.config.pattern.matcher(input);
           if (matcher.matches()) {
             return null;

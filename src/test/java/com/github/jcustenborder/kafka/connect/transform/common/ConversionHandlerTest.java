@@ -52,11 +52,10 @@ public class ConversionHandlerTest {
 
 
     return tests.entries().stream()
-        .map(e -> dynamicTest(String.format(
-            "%s - %s",
-            ConversionHandler.SchemaKey.of(e.getKey()),
-            e.getValue()
-        ), () -> {
+        .map(e -> dynamicTest("%s - %s".formatted(
+        ConversionHandler.SchemaKey.of(e.getKey()),
+        e.getValue()
+    ), () -> {
           final Schema schema = e.getKey();
           final Object expected = e.getValue();
           final String headerName = "input";
