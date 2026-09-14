@@ -811,6 +811,219 @@ Specifies the behavior when the record does not have the field(s) used in the fi
 *Type:* STRING
 
 
+# Field Paths
+
+`Cast` and `RoundDecimal` target fields with a shared field path syntax that reaches into structs,
+maps and arrays. Records with a schema (`Struct`) and without one (`Map`) are both supported.
+
+| Spec | Matches |
+| --- | --- |
+| `ITEM.ATTRIBUTES.IS_DIGITAL_GOOD` | The `IS_DIGITAL_GOOD` field of the `ATTRIBUTES` object inside `ITEM`. |
+| `RATINGS[*].VINTAGE` | The `VINTAGE` field of every element of the `RATINGS` array. |
+| `RATINGS[1].VINTAGE` | The `VINTAGE` field of the second element of the `RATINGS` array only. |
+| `ITEM.*` | Every field of `ITEM`. |
+| `ITEM.IS_*` | Every field of `ITEM` whose name starts with `IS_`. `*` and `?` glob wildcards may appear anywhere in a name. |
+| `**.VINTAGE` | Every `VINTAGE` field at any depth. |
+| `$` or an empty string | The key or value itself. |
+
+A leading `$` or `$.` is accepted so JSONPath style specs work too. Name matching is case sensitive.
+
+### Note
+
+Kafka Connect arrays and maps declare a single element schema, so all of their elements must share
+one schema. When a record has a schema and an index specific path such as `RATINGS[1].VINTAGE` would
+change that schema, the transformation fails with a `DataException`. Use `RATINGS[*].VINTAGE` so
+every element changes together. Schemaless records have no such restriction.
+
+The reusable implementation lives in `FieldPath` and `FieldPathUpdater` so future transformations
+can target fields the same way.
+
+
+## Cast
+
+*Key*
+```
+com.github.jcustenborder.kafka.connect.transform.common.Cast$Key
+```
+*Value*
+```
+com.github.jcustenborder.kafka.connect.transform.common.Cast$Value
+```
+
+This transformation casts fields, or the entire key or value, to a different type. It behaves like
+the stock `org.apache.kafka.connect.transforms.Cast` but additionally targets deeply nested fields
+using the [field path](#field-paths) syntax above.
+
+### Tip
+
+Strings are cast to booleans using the common textual representations, so `0`, `false`, `f`, `no`,
+`n` and `off` all become `false` while `1`, `true`, `t`, `yes`, `y` and `on` all become `true`. Any
+other numeric string is `true` when it is non zero.
+
+### Configuration
+
+#### General
+
+
+##### `spec`
+
+List of fields and the type to cast them to, of the form `field1:type1,field2:type2`. A bare `type`
+casts the entire key or value.
+
+*Importance:* HIGH
+
+*Type:* LIST
+
+*Valid Values:* Types are `int8`, `int16`, `int32`, `int64`, `float32`, `float64`, `boolean` and `string`
+
+
+
+##### `skip.missing.or.null`
+
+How to handle fields that are not present in the record or that are null. When true the field is
+left alone, when false a `DataException` is thrown.
+
+*Importance:* MEDIUM
+
+*Type:* BOOLEAN
+
+*Default Value:* true
+
+
+### Example
+
+Given the following value:
+
+```json
+{
+  "PRODUCT": { "PRODUCT_KEY": "158425" },
+  "RATINGS": [
+    { "RATING_KEY": "6695543", "RATING_TEXT": "93", "VINTAGE": "2024" },
+    { "RATING_KEY": "6695544", "RATING_TEXT": "91", "VINTAGE": "2022" }
+  ],
+  "ITEM": {
+    "ITEM_KEY": "1223750",
+    "ATTRIBUTES": { "IS_DIGITAL_GOOD": "0" }
+  },
+  "ITEM_HIERARCHY": { "CLASS_CODE": "541.01" }
+}
+```
+
+and the configuration:
+
+```json
+{
+  "transforms": "cast",
+  "transforms.cast.type": "com.github.jcustenborder.kafka.connect.transform.common.Cast$Value",
+  "transforms.cast.spec": "ITEM.ATTRIBUTES.IS_DIGITAL_GOOD:boolean,RATINGS[*].VINTAGE:int32,ITEM_HIERARCHY.CLASS_CODE:float64"
+}
+```
+
+`IS_DIGITAL_GOOD` becomes `false`, both `VINTAGE` fields become the integers `2024` and `2022`, and
+`CLASS_CODE` becomes `541.01`.
+
+
+## RoundDecimal
+
+*Key*
+```
+com.github.jcustenborder.kafka.connect.transform.common.RoundDecimal$Key
+```
+*Value*
+```
+com.github.jcustenborder.kafka.connect.transform.common.RoundDecimal$Value
+```
+
+This transformation rounds numeric fields to a fixed number of decimal places. It targets fields
+with the same [field path](#field-paths) syntax as `Cast`, so unlike `AdjustPrecisionAndScale` it
+reaches fields nested inside structs, maps and arrays.
+
+### Note
+
+Decimal fields are rewritten with the new scale, so the schema of a schemaful record changes. Float,
+double and numeric string fields keep their original type, and integer fields are left alone.
+
+### Configuration
+
+#### General
+
+
+##### `fields`
+
+The fields to round.
+
+*Importance:* HIGH
+
+*Type:* LIST
+
+
+
+##### `scale`
+
+The number of decimal places to round to.
+
+*Importance:* HIGH
+
+*Type:* INT
+
+*Validator:* [0,...,127]
+
+
+
+##### `rounding.mode`
+
+The `java.math.RoundingMode` used when discarding decimal places.
+
+*Importance:* MEDIUM
+
+*Type:* STRING
+
+*Default Value:* HALF_UP
+
+*Validator:* Matches: ``UP``, ``DOWN``, ``CEILING``, ``FLOOR``, ``HALF_UP``, ``HALF_DOWN``, ``HALF_EVEN``, ``UNNECESSARY``
+
+
+
+##### `precision`
+
+The value written to the `connect.decimal.precision` schema parameter of rounded decimal fields.
+`0`, the default, leaves the existing precision alone. This only affects the schema, never the value.
+
+*Importance:* LOW
+
+*Type:* INT
+
+*Default Value:* 0
+
+*Validator:* [0,...,127]
+
+
+
+##### `skip.missing.or.null`
+
+How to handle fields that are not present in the record or that are null. When true the field is
+left alone, when false a `DataException` is thrown.
+
+*Importance:* MEDIUM
+
+*Type:* BOOLEAN
+
+*Default Value:* true
+
+
+### Example
+
+```json
+{
+  "transforms": "round",
+  "transforms.round.type": "com.github.jcustenborder.kafka.connect.transform.common.RoundDecimal$Value",
+  "transforms.round.fields": "ITEM.PRICE,LINES[*].AMOUNT",
+  "transforms.round.scale": "2",
+  "transforms.round.rounding.mode": "HALF_UP"
+}
+```
+
+
 # Development
 
 ## Building the source
